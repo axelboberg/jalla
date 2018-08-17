@@ -1,16 +1,32 @@
 var path = require('path')
 var assert = require('assert')
 var crypto = require('crypto')
+
+// 3rd party libraries
 var {get} = require('koa-route')
 var serve = require('koa-static')
+
+// Custom libraries
 var ui = require('./lib/ui')
 var App = require('./lib/app')
 var style = require('./lib/style')
 var script = require('./lib/script')
 var render = require('./lib/render')
 var manifest = require('./lib/manifest')
+var disk = require('./lib/disk')
 
 module.exports = start
+
+/**
+ * Hash a buffer
+ * @param {Buffer} buffer
+ * @param {String} hash The hashing method to use, defaults to sha256
+ * @param {String} digest The digestion-format in which to return the hast, defaults to base64
+ * @returns {String} The hashed buffer
+ */
+function createHashFromBuffer (buffer, hash = 'sha256', digest = 'base64') {
+  return encodeURIComponent(crypto.createHash(hash).update(buffer).digest(digest))
+}
 
 function start (entry, opts = {}) {
   assert(typeof entry === 'string', 'jalla: entry should be a string')
@@ -24,26 +40,35 @@ function start (entry, opts = {}) {
   app.silent = true
   app.base = opts.base || ''
   app.context.script = {branches: {}}
-  app.context.style = {branhces: {}}
-
-  if (!opts.quiet) ui(app)
+  app.context.style = {branches: {}}
 
   app.on('bundle:script', function (file, buff) {
+
+    let branch = {
+      buffer: buff,
+      hash: createHashFromBuffer(buff)
+    }
+
     if (file === entry) {
       app.context.script.buffer = buff
-      app.context.script.hash = crypto.createHash('sha512').update(buff).digest('buffer')
+      app.context.script.hash = createHashFromBuffer(buff)
     } else {
       let branch = app.context.script.branches[file] = {}
       branch.buffer = buff
-      branch.hash = crypto.createHash('sha512').update(buff).digest('buffer')
+      branch.hash = createHashFromBuffer(buff)
     }
+
+
   })
   app.on('bundle:style', function (file, buff) {
     app.context.style = {
       buffer: buff,
-      hash: crypto.createHash('sha512').update(buff).digest('buffer')
+      hash: createHashFromBuffer(buff)
     }
   })
+
+  if (!opts.quiet) ui(app)
+  if (opts.disk) disk(app)
 
   app.use(async function (ctx, next) {
     var start = Date.now()

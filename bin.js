@@ -18,6 +18,7 @@ var argv = minimist(process.argv.slice(2), {
     'debug': 'd',
     'base': 'b',
     'port': 'p',
+    'disk': 'w',
     'help': 'h'
   },
   default: {
@@ -43,6 +44,7 @@ if (argv.help) {
       --debug, -d             enable node inspector, accepts port
       --base, -b              base path where app will be mounted
       --port, -p              server port
+      --disk, -w              write bundled files to disk
       --help, -h              show this help text
 
     ${chalk.dim('examples')}
@@ -76,6 +78,7 @@ if (argv.debug) {
 
 var opts = {}
 if (argv['css']) opts.css = argv['css']
+if (argv['disk']) opts.disk = argv['disk']
 if (argv['service-worker']) opts.sw = argv['service-worker']
 
 var app = stack(path.resolve(process.cwd(), entry), opts)
